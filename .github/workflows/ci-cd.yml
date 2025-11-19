@@ -75,9 +75,7 @@ jobs:
           tags: ${{ env.REGISTRY }}/${{ env.DOCKER_USERNAME }}/${{ env.DOCKER_IMAGE_NAME }}:latest
 
       - name: Image pushed successfully
-        run: |
-          echo "image-pushed=true" >> $GITHUB_OUTPUT
-          echo "✅ Docker image pushed to Docker Hub"
+        run: echo "✅ Docker image pushed to Docker Hub"
     outputs:
         image-pushed: ${{ steps.push.outputs.image-pushed }}
 
@@ -102,6 +100,7 @@ jobs:
           while [ "$IMAGE_PUSHED" != "true" ] && [ $COUNTER -lt 120 ]; do
             echo "⏳ Waiting for image push... (attempt $((COUNTER + 1))/120)"
             sleep 5
+            echo "$IMAGE_PUSHED"
             COUNTER=$((COUNTER + 1))
           done
           
