@@ -112,9 +112,7 @@ jobs:
 
       - name: Perform rollout restart
         run: |
-          kubectl scale deployment/microservices-app --replicas=0 \
-            -n ${{ env.KUBE_NAMESPACE }}
-          kubectl scale deployment/microservices-app --replicas=1 \
+          kubectl rollout restart deployment/microservices-app \
             -n ${{ env.KUBE_NAMESPACE }}
 
       - name: Wait for rollout to complete
