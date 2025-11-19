@@ -77,7 +77,9 @@ jobs:
 
       - name: Image pushed successfully
         id: push
-        run: echo "✅ Docker image pushed to Docker Hub"
+        run: |
+          echo "image-pushed=true" >> $GITHUB_OUTPUT
+          echo "✅ Docker image pushed to Docker Hub"
 
 
   deploy:
@@ -98,14 +100,14 @@ jobs:
           IMAGE_PUSHED="${{ needs.build-and-push.outputs.image-pushed }}"
           COUNTER=0
           
-          while [ "$IMAGE_PUSHED" != "true" ] && [ $COUNTER -lt 120 ]; do
+          while [ "${{ needs.build-and-push.outputs.image-pushed }}" != "true" ] && [ $COUNTER -lt 120 ]; do
             echo "⏳ Waiting for image push... (attempt $((COUNTER + 1))/120)"
-            echo "Waiting for: $IMAGE_PUSHED"
+            echo "Waiting for: "${{ needs.build-and-push.outputs.image-pushed }}""
             sleep 5
             COUNTER=$((COUNTER + 1))
           done
           
-          if [ "$IMAGE_PUSHED" = "true" ]; then
+          if [ "${{ needs.build-and-push.outputs.image-pushed }}" == "true" ]; then
             echo "✅ Image push confirmed!"
           else
             echo "⚠️  Image push timeout, proceeding anyway..."
