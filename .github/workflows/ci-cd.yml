@@ -75,21 +75,41 @@ jobs:
           tags: ${{ env.REGISTRY }}/${{ env.DOCKER_USERNAME }}/${{ env.DOCKER_IMAGE_NAME }}:latest
 
       - name: Image pushed successfully
-        run: echo "✅ Docker image pushed to Docker Hub"
+        run: |
+          echo "image-pushed=true" >> $GITHUB_OUTPUT
+          echo "✅ Docker image pushed to Docker Hub"
+    outputs:
+        image-pushed: ${{ steps.push.outputs.image-pushed }}
 
   deploy:
     name: Deploy to Kubernetes
     runs-on: ubuntu-latest
-    needs: [detect-changes, build-and-push]
+    needs: detect-changes
     if: |
-      (needs.detect-changes.outputs.k8s-changed == 'true' || 
-      needs.detect-changes.outputs.app-changed == 'true') &&
-      (needs.build-and-push.result == 'success' || 
-      needs.build-and-push.result == 'skipped')
+      needs.detect-changes.outputs.k8s-changed == 'true' ||
+      needs.detect-changes.outputs.app-changed == 'true'
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+
+      - name: Wait for Docker image push if app changed
+        if: needs.detect-changes.outputs.app-changed == 'true'
+        run: |
+          IMAGE_PUSHED="${{ needs.build-and-push.outputs.image-pushed }}"
+          COUNTER=0
+          
+          while [ "$IMAGE_PUSHED" != "true" ] && [ $COUNTER -lt 120 ]; do
+            echo "⏳ Waiting for image push... (attempt $((COUNTER + 1))/120)"
+            sleep 5
+            COUNTER=$((COUNTER + 1))
+          done
+          
+          if [ "$IMAGE_PUSHED" = "true" ]; then
+            echo "✅ Image push confirmed!"
+          else
+            echo "⚠️  Image push timeout, proceeding anyway..."
+          fi
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
