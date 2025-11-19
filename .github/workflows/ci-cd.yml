@@ -85,7 +85,7 @@ jobs:
   deploy:
     name: Deploy to Kubernetes
     runs-on: ubuntu-latest
-    needs: detect-changes
+    needs: [ detect-changes, build-and-push ]
     if: |
       needs.detect-changes.outputs.k8s-changed == 'true' ||
       needs.detect-changes.outputs.app-changed == 'true'
