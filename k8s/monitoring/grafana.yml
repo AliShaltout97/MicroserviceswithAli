@@ -49,12 +49,14 @@ data:
           "id": 1,
           "title": "Memory (MB)",
           "type": "graph",
+          "gridPos": {"h": 6, "w": 12, "x": 0, "y": 6},
           "targets": [{"expr": "container_memory_usage_bytes{namespace=\"pwc-app\",pod=~\"microservices-app.*\"}/1024/1024", "legendFormat": "{{pod}}"}]
         },
         {
           "id": 2,
           "title": "CPU Usage",
           "type": "graph",
+          "gridPos": {"h": 6, "w": 12, "x": 0, "y": 12},
           "targets": [{"expr": "rate(container_cpu_usage_seconds_total{namespace=\"pwc-app\",pod=~\"microservices-app.*\"}[5m])", "legendFormat": "{{pod}}"}]
         }
       ],
