@@ -86,10 +86,10 @@ The Flask application exposes two REST endpoints:
 
 ### Container Configuration
 The application is containerized using the `Dockerfile` which:
-- Uses Python 3.9 slim base image
+- Uses Python 3.11 slim base image
 - Installs dependencies from `requirements.txt` (Needed Werkzeug==2.2.2 because by default Flask 2.2.2 uses 3 which is not compatible)
 - Exposes port 5000
-- Runs the Flask application via `run.py`
+- Runs the Flask application
 
 ### Build and Push Docker Image
 
