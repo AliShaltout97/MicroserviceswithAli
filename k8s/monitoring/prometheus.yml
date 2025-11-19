@@ -86,6 +86,8 @@ spec:
     metadata:
       labels:
         app: prometheus
+      annotations:
+        kubectl.kubernetes.io/restartedAt: "{{ now }}"
     spec:
       serviceAccountName: prometheus
       containers:

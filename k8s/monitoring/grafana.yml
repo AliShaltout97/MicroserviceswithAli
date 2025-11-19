@@ -80,6 +80,8 @@ spec:
     metadata:
       labels:
         app: grafana
+      annotations:
+        kubectl.kubernetes.io/restartedAt: "{{ now }}"
     spec:
       containers:
       - name: grafana
