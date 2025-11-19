@@ -14,47 +14,54 @@ data:
       access: proxy
       url: http://prometheus:9090
       isDefault: true
-      editable: false
 
 ---
-# Grafana Dashboard Config
+# Grafana Dashboard Provider
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-provider
+  namespace: monitoring
+data:
+  dashboards.yml: |
+    apiVersion: 1
+    providers:
+    - name: 'default'
+      orgId: 1
+      folder: ''
+      type: file
+      options:
+        path: /var/lib/grafana/dashboards
+
+---
+# Simple Dashboard
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: grafana-dashboard
   namespace: monitoring
 data:
-  dashboard.json: |
+  pwc-dashboard.json: |
     {
-      "dashboard": {
-        "title": "PWC Microservices Monitor",
-        "panels": [
-          {
-            "id": 1,
-            "title": "/users Endpoint Status",
-            "targets": [{"expr": "probe_success{job=\"users-endpoint-check\"}"}],
-            "type": "stat"
-          },
-          {
-            "id": 2,
-            "title": "/products Endpoint Status",
-            "targets": [{"expr": "probe_success{job=\"products-endpoint-check\"}"}],
-            "type": "stat"
-          },
-          {
-            "id": 3,
-            "title": "Pod Memory Usage",
-            "targets": [{"expr": "container_memory_usage_bytes{pod=~\"microservices-app.*\"}"}],
-            "type": "graph"
-          },
-          {
-            "id": 4,
-            "title": "Pod CPU Usage",
-            "targets": [{"expr": "rate(container_cpu_usage_seconds_total{pod=~\"microservices-app.*\"}[5m])"}],
-            "type": "graph"
-          }
-        ]
-      }
+      "title": "PWC Monitor",
+      "panels": [
+        {
+          "id": 1,
+          "title": "Memory (MB)",
+          "type": "graph",
+          "gridPos": {"h": 6, "w": 12, "x": 0, "y": 6},
+          "targets": [{"expr": "container_memory_usage_bytes{namespace=\"pwc-app\",pod=~\"microservices-app.*\"}/1024/1024", "legendFormat": "{{pod}}"}]
+        },
+        {
+          "id": 2,
+          "title": "CPU Usage",
+          "type": "graph",
+          "gridPos": {"h": 6, "w": 12, "x": 0, "y": 12},
+          "targets": [{"expr": "rate(container_cpu_usage_seconds_total{namespace=\"pwc-app\",pod=~\"microservices-app.*\"}[5m])", "legendFormat": "{{pod}}"}]
+        }
+      ],
+      "refresh": "10s",
+      "time": {"from": "now-1h", "to": "now"}
     }
 
 ---
@@ -64,8 +71,6 @@ kind: Deployment
 metadata:
   name: grafana
   namespace: monitoring
-  labels:
-    app: grafana
 spec:
   replicas: 1
   selector:
@@ -81,19 +86,20 @@ spec:
         image: grafana/grafana:10.2.2
         ports:
         - containerPort: 3000
-          name: web
         env:
         - name: GF_SECURITY_ADMIN_USER
           value: "admin"
         - name: GF_SECURITY_ADMIN_PASSWORD
           value: "admin"
-        - name: GF_USERS_ALLOW_SIGN_UP
-          value: "false"
+        - name: GF_AUTH_ANONYMOUS_ENABLED
+          value: "true"
         volumeMounts:
         - name: datasource
           mountPath: /etc/grafana/provisioning/datasources
-        - name: storage
-          mountPath: /var/lib/grafana
+        - name: dashboard-provider
+          mountPath: /etc/grafana/provisioning/dashboards
+        - name: dashboards
+          mountPath: /var/lib/grafana/dashboards
         resources:
           requests:
             memory: "128Mi"
@@ -105,8 +111,12 @@ spec:
       - name: datasource
         configMap:
           name: grafana-datasource
-      - name: storage
-        emptyDir: {}
+      - name: dashboard-provider
+        configMap:
+          name: grafana-dashboard-provider
+      - name: dashboards
+        configMap:
+          name: grafana-dashboard
 
 ---
 # Grafana Service
@@ -115,13 +125,10 @@ kind: Service
 metadata:
   name: grafana
   namespace: monitoring
-  labels:
-    app: grafana
 spec:
   type: LoadBalancer
   ports:
   - port: 3000
     targetPort: 3000
-    name: web
   selector:
     app: grafana

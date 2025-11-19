@@ -1,5 +1,4 @@
 ---
-# Simple Prometheus Config - No Blackbox
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -16,34 +15,25 @@ data:
         static_configs:
           - targets: ['localhost:9090']
       
-      # Monitor Kubernetes nodes (CPU, Memory, etc)
-      - job_name: 'kubernetes-nodes'
+      # Monitor Kubernetes nodes (cAdvisor - CPU, Memory)
+      - job_name: 'kubernetes-cadvisor'
+        scheme: https
+        tls_config:
+          ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+        bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
         kubernetes_sd_configs:
           - role: node
         relabel_configs:
           - action: labelmap
             regex: __meta_kubernetes_node_label_(.+)
-      
-      # Monitor your pods in pwc-app namespace
-      - job_name: 'pwc-app-pods'
-        kubernetes_sd_configs:
-          - role: pod
-            namespaces:
-              names:
-                - pwc-app
-        relabel_configs:
-          - source_labels: [__meta_kubernetes_pod_label_app]
-            action: keep
-            regex: microservices
-          - source_labels: [__meta_kubernetes_pod_name]
-            target_label: pod
-          - source_labels: [__meta_kubernetes_namespace]
-            target_label: namespace
-          - source_labels: [__meta_kubernetes_pod_phase]
-            target_label: phase
+          - target_label: __address__
+            replacement: kubernetes.default.svc:443
+          - source_labels: [__meta_kubernetes_node_name]
+            regex: (.+)
+            target_label: __metrics_path__
+            replacement: /api/v1/nodes/${1}/proxy/metrics/cadvisor
 
 ---
-# Service Account
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -51,7 +41,6 @@ metadata:
   namespace: monitoring
 
 ---
-# Cluster Role
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -61,16 +50,14 @@ rules:
     resources:
       - nodes
       - nodes/proxy
-      - nodes/metrics
       - services
       - endpoints
       - pods
     verbs: ["get", "list", "watch"]
-  - nonResourceURLs: ["/metrics", "/metrics/cadvisor"]
+  - nonResourceURLs: ["/metrics"]
     verbs: ["get"]
 
 ---
-# Cluster Role Binding
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
@@ -85,7 +72,6 @@ subjects:
     namespace: monitoring
 
 ---
-# Prometheus Deployment
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -126,7 +112,6 @@ spec:
           name: prometheus-config
 
 ---
-# Prometheus Service
 apiVersion: v1
 kind: Service
 metadata:
