@@ -1,0 +1,127 @@
+---
+# Grafana Datasource Config
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-datasource
+  namespace: monitoring
+data:
+  datasource.yml: |
+    apiVersion: 1
+    datasources:
+    - name: Prometheus
+      type: prometheus
+      access: proxy
+      url: http://prometheus:9090
+      isDefault: true
+      editable: false
+
+---
+# Grafana Dashboard Config
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard
+  namespace: monitoring
+data:
+  dashboard.json: |
+    {
+      "dashboard": {
+        "title": "PWC Microservices Monitor",
+        "panels": [
+          {
+            "id": 1,
+            "title": "/users Endpoint Status",
+            "targets": [{"expr": "probe_success{job=\"users-endpoint-check\"}"}],
+            "type": "stat"
+          },
+          {
+            "id": 2,
+            "title": "/products Endpoint Status",
+            "targets": [{"expr": "probe_success{job=\"products-endpoint-check\"}"}],
+            "type": "stat"
+          },
+          {
+            "id": 3,
+            "title": "Pod Memory Usage",
+            "targets": [{"expr": "container_memory_usage_bytes{pod=~\"microservices-app.*\"}"}],
+            "type": "graph"
+          },
+          {
+            "id": 4,
+            "title": "Pod CPU Usage",
+            "targets": [{"expr": "rate(container_cpu_usage_seconds_total{pod=~\"microservices-app.*\"}[5m])"}],
+            "type": "graph"
+          }
+        ]
+      }
+    }
+
+---
+# Grafana Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana
+  namespace: monitoring
+  labels:
+    app: grafana
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grafana
+  template:
+    metadata:
+      labels:
+        app: grafana
+    spec:
+      containers:
+      - name: grafana
+        image: grafana/grafana:10.2.2
+        ports:
+        - containerPort: 3000
+          name: web
+        env:
+        - name: GF_SECURITY_ADMIN_USER
+          value: "admin"
+        - name: GF_SECURITY_ADMIN_PASSWORD
+          value: "admin"
+        - name: GF_USERS_ALLOW_SIGN_UP
+          value: "false"
+        volumeMounts:
+        - name: datasource
+          mountPath: /etc/grafana/provisioning/datasources
+        - name: storage
+          mountPath: /var/lib/grafana
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "50m"
+          limits:
+            memory: "256Mi"
+            cpu: "100m"
+      volumes:
+      - name: datasource
+        configMap:
+          name: grafana-datasource
+      - name: storage
+        emptyDir: {}
+
+---
+# Grafana Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana
+  namespace: monitoring
+  labels:
+    app: grafana
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 3000
+    targetPort: 3000
+    name: web
+  selector:
+    app: grafana
