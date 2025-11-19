@@ -99,7 +99,7 @@ jobs:
           
           while [ "$IMAGE_PUSHED" != "true" ] && [ $COUNTER -lt 120 ]; do
             echo "⏳ Waiting for image push... (attempt $((COUNTER + 1))/120)"
-            echo "$IMAGE_PUSHED"
+            echo "Waiting for: $IMAGE_PUSHED"
             sleep 5
             COUNTER=$((COUNTER + 1))
           done
