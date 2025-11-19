@@ -80,6 +80,11 @@ jobs:
   deploy:
     name: Deploy to Kubernetes
     runs-on: ubuntu-latest
+    needs: [detect-changes, build-and-push]
+    if: |
+        always() && 
+        (needs.detect-changes.outputs.k8s-changed == 'true' || 
+        needs.detect-changes.outputs.app-changed == 'true')
 
     steps:
       - name: Checkout code
@@ -100,6 +105,8 @@ jobs:
 
       - name: Apply Kubernetes manifests
         run: |
+          pwd
+          ls -la
           kubectl apply -f ../../k8s/namespace.yaml
           kubectl apply -f ../../k8s/deployment.yml
           kubectl apply -f ../../k8s/service.yaml
