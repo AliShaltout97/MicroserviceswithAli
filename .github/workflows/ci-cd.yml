@@ -56,7 +56,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: detect-changes
     if: needs.detect-changes.outputs.app-changed == 'true'
-
+    outputs:
+        image-pushed: ${{ steps.push.outputs.image-pushed }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -75,9 +76,9 @@ jobs:
           tags: ${{ env.REGISTRY }}/${{ env.DOCKER_USERNAME }}/${{ env.DOCKER_IMAGE_NAME }}:latest
 
       - name: Image pushed successfully
+        id: push
         run: echo "✅ Docker image pushed to Docker Hub"
-    outputs:
-        image-pushed: ${{ steps.push.outputs.image-pushed }}
+
 
   deploy:
     name: Deploy to Kubernetes
