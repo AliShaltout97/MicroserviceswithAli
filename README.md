@@ -120,10 +120,10 @@ cd terraform
 terraform init
 
 # Review the infrastructure plan
-terraform plan
+terraform plan -out .terraform/plan
 
-# Create the EKS cluster (takes ~15 minutes)
-terraform apply -auto-approve
+# Create the EKS cluster (takes ~20 minutes)
+terraform apply
 
 # Configure kubectl to use the new cluster
 aws eks update-kubeconfig --region us-east-1 --name pwc-eks-cluster
@@ -160,18 +160,12 @@ The service is exposed via AWS LoadBalancer (`k8s/service.yml`):
 - **Port**: 80 (external) → 5000 (container)
 - **Health Checks**: Kubernetes liveness/readiness probes
 
-### Get Service URL
-
-```bash
-# Get the LoadBalancer URL
-kubectl get svc microservices-app -n pwc-app -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'
-```
 
 ### Access Endpoints
 
 ```bash
 # Get the LoadBalancer hostname
-LOAD_BALANCER=$(kubectl get svc microservices-app -n pwc-app -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+LOAD_BALANCER=$(kubectl get svc microservices-service -n pwc-app -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
 
 # Test endpoints
 curl http://$LOAD_BALANCER/users
@@ -247,10 +241,12 @@ The monitoring stack includes:
 
 ```bash
 # Get application URL
-APP_URL=$(kubectl get svc microservices-app -n pwc-app -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+APP_URL=$(kubectl get svc microservices-service -n pwc-app -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
 
 echo "Users endpoint: http://$APP_URL/users"
+# URL: http://a7c7ef1f4e88647ac8520d3ac497c047-980231841.us-east-1.elb.amazonaws.com/users
 echo "Products endpoint: http://$APP_URL/products"
+# URL: http://a7c7ef1f4e88647ac8520d3ac497c047-980231841.us-east-1.elb.amazonaws.com/products
 ```
 
 ### Monitoring Dashboards
@@ -259,12 +255,14 @@ echo "Products endpoint: http://$APP_URL/products"
 # Get Prometheus URL
 PROM_URL=$(kubectl get svc prometheus -n monitoring -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
 echo "Prometheus: http://$PROM_URL:9090"
+# URL: http://a2961230ac705441da0a62f86cd7b00c-2048440663.us-east-1.elb.amazonaws.com:9090
 
 # Get Grafana URL
 GRAFANA_URL=$(kubectl get svc grafana -n monitoring -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
 echo "Grafana: http://$GRAFANA_URL:3000"
+# URL: http://a8c9f6bf32fec4a2790ff9f1dc8ace60-237913899.us-east-1.elb.amazonaws.com:3000
 ```
-**Grafana Credentials**: admin / admin
+**Grafana Credentials**: admin / admin (Default)
 
 
 
